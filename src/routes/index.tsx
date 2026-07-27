@@ -5,12 +5,13 @@ import { supabase } from '../lib/supabase'
 export const Route = createFileRoute('/')({ component: WHHome })
 
 const TABS = [
-  { id: 'news',        label: 'News' },
-  { id: 'eo',          label: 'Executive Orders' },
-  { id: 'memo',        label: 'Memos' },
-  { id: 'gallery',     label: 'Gallery' },
-  { id: 'leadership',  label: 'Leadership' },
-  { id: 'applications',label: 'Applications' },
+  { id: 'home',         label: 'Home' },
+  { id: 'news',         label: 'News' },
+  { id: 'eo',           label: 'Executive Orders' },
+  { id: 'memo',         label: 'Memos' },
+  { id: 'gallery',      label: 'Gallery' },
+  { id: 'leadership',   label: 'Leadership' },
+  { id: 'applications', label: 'Applications' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -170,6 +171,109 @@ function PostFeed({ category, accent }: { category: Post['category']; accent: st
   )
 }
 
+/* ─── Stat box ──────────────────────────────────────────────────── */
+function StatBox({ label, value, accent, onClick }: { label: string; value: string; accent: string; onClick?: () => void }) {
+  const Tag = onClick ? 'button' : 'div'
+  return (
+    <Tag onClick={onClick} style={{
+      background: C.white, border: `1px solid ${C.border}`, borderTop: `3px solid ${accent}`, borderRadius: 10,
+      padding: '16px 18px', textAlign: 'left', cursor: onClick ? 'pointer' : 'default',
+      boxShadow: '0 2px 10px rgba(10,34,64,0.06)', fontFamily: 'inherit',
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: C.darkGray }}>{value}</div>
+    </Tag>
+  )
+}
+
+/* ─── Home tab ──────────────────────────────────────────────────── */
+function HomeTab({ setTab }: { setTab: (t: TabId) => void }) {
+  const [featured, setFeatured] = useState<Post | null>(null)
+  const [recent, setRecent] = useState<Post[]>([])
+  const [counts, setCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    supabase.from('wh_posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(1)
+      .then(({ data }) => setFeatured(data?.[0] || null))
+    supabase.from('wh_posts').select('*').order('created_at', { ascending: false }).limit(6)
+      .then(({ data }) => setRecent(data || []))
+    supabase.from('wh_posts').select('category').then(({ data }) => {
+      const c: Record<string, number> = {}
+      ;(data || []).forEach((p: any) => { c[p.category] = (c[p.category] || 0) + 1 })
+      setCounts(c)
+    })
+  }, [])
+
+  const accentFor = (cat: string) => cat === 'eo' ? C.gold : cat === 'memo' ? C.navyLight : C.navy
+
+  return (
+    <div>
+      {/* Featured hero */}
+      <div style={{ background: C.white, borderRadius: 16, padding: 24, boxShadow: '0 6px 24px rgba(10,34,64,0.10)', border: `1px solid ${C.border}`, marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: featured?.image_url ? '1fr 1fr' : '1fr', gap: 28, alignItems: 'center' }}>
+          <div>
+            <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: 1.5, marginBottom: 12, background: featured ? accentFor(featured.category) : C.navy, borderRadius: 20, padding: '4px 12px' }}>
+              {featured ? (featured.category === 'eo' ? 'EXECUTIVE ORDER' : featured.category === 'memo' ? 'MEMO' : 'FEATURED') : 'OSFUSA WHITE HOUSE'}
+            </div>
+            <div style={{ fontSize: 30, fontWeight: 700, color: C.navyDark, fontFamily: 'Georgia, serif', lineHeight: 1.15, marginBottom: 14 }}>
+              {featured ? featured.title : 'Serving the American people'}
+            </div>
+            <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 20 }}>
+              {featured ? featured.body.slice(0, 140) + (featured.body.length > 140 ? '...' : '') : 'News, executive orders, and official memos from the White House.'}
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <button onClick={() => setTab(featured ? (featured.category as TabId) : 'news')} style={{ background: C.navy, color: C.white, border: 'none', borderRadius: 6, padding: '11px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                Read more
+              </button>
+              <button onClick={() => setTab('leadership')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.navy, borderRadius: 6, padding: '11px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                Meet Leadership
+              </button>
+            </div>
+          </div>
+          {featured?.image_url && (
+            <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height: 240, boxShadow: '0 8px 30px rgba(10,34,64,0.18)' }}>
+              <img src={featured.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick stat boxes */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 28 }}>
+        <StatBox label="News" value={`${counts.news || 0} posted`} accent={C.navy} onClick={() => setTab('news')} />
+        <StatBox label="Executive Orders" value={`${counts.eo || 0} issued`} accent={C.gold} onClick={() => setTab('eo')} />
+        <StatBox label="Memos" value={`${counts.memo || 0} released`} accent={C.navyLight} onClick={() => setTab('memo')} />
+        <StatBox label="Join the Staff" value="View openings" accent={C.gold} onClick={() => setTab('applications')} />
+      </div>
+
+      {/* Recent posts */}
+      {recent.length > 0 && (
+        <div>
+          <h3 style={{ fontSize: 13, fontWeight: 700, color: C.darkGray, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1 }}>Recent updates</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {recent.map(p => (
+              <button key={p.id} onClick={() => setTab(p.category as TabId)} style={{
+                textAlign: 'left', display: 'flex', gap: 14, alignItems: 'center', background: C.white,
+                border: `1px solid ${C.border}`, borderLeft: `4px solid ${accentFor(p.category)}`, borderRadius: 8,
+                padding: '14px 18px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(10,34,64,0.05)',
+              }}>
+                {p.image_url && <img src={p.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />}
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: accentFor(p.category), textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>
+                    {p.category === 'eo' ? `Executive Order${p.eo_number ? ' No. ' + p.eo_number : ''}` : p.category === 'memo' ? 'Memo' : 'News'}
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{p.title}</div>
+                  <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{new Date(p.created_at).toLocaleDateString()}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── Gallery tab ───────────────────────────────────────────────── */
 function GalleryTab() {
   const [items, setItems] = useState<any[]>([])
@@ -262,12 +366,13 @@ function ApplicationsTab() {
 
 /* ─── Page ──────────────────────────────────────────────────────── */
 function WHHome() {
-  const [tab, setTab] = useState<TabId>('news')
+  const [tab, setTab] = useState<TabId>('home')
 
   return (
     <div style={{ minHeight: '100vh', background: C.offWhite, fontFamily: 'system-ui, sans-serif' }}>
       <Header tab={tab} setTab={setTab} />
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px' }}>
+        {tab === 'home' && <HomeTab setTab={setTab} />}
         {tab === 'news' && <PostFeed category="news" accent={C.navy} />}
         {tab === 'eo' && <PostFeed category="eo" accent={C.gold} />}
         {tab === 'memo' && <PostFeed category="memo" accent={C.navyLight} />}
