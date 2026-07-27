@@ -10,11 +10,10 @@ const TABS = [
   { id: 'eo',           label: 'Executive Orders' },
   { id: 'memo',         label: 'Memos' },
   { id: 'gallery',      label: 'Gallery' },
-  { id: 'leadership',   label: 'Leadership' },
-  { id: 'applications', label: 'Applications' },
+  { id: 'applications', label: 'The White House' },
 ] as const
 
-type TabId = (typeof TABS)[number]['id']
+type TabId = 'home' | 'news' | 'eo' | 'memo' | 'gallery' | 'leadership' | 'applications'
 
 const C = {
   navy: '#0a2240', navyDark: '#061530', navyLight: '#123457',
@@ -93,16 +92,75 @@ function HeaderSearch({ setTab }: { setTab: (t: TabId) => void }) {
   )
 }
 
+/* ─── Mega menu ─────────────────────────────────────────────────── */
+const MEGA_MENU: { label: string; items: { label: string; action: 'tab' | 'link'; target: string }[] }[] = [
+  { label: 'News', items: [
+    { label: 'Latest News', action: 'tab', target: 'news' },
+    { label: 'Executive Orders', action: 'tab', target: 'eo' },
+    { label: 'Memos', action: 'tab', target: 'memo' },
+  ]},
+  { label: 'Media', items: [
+    { label: 'Photo Gallery', action: 'tab', target: 'gallery' },
+    { label: 'Livestream (C-SPAN)', action: 'link', target: 'https://osfcspan.netlify.app' },
+  ]},
+  { label: 'Administration', items: [
+    { label: 'Leadership', action: 'tab', target: 'leadership' },
+  ]},
+  { label: 'Get Involved', items: [
+    { label: 'The White House', action: 'tab', target: 'applications' },
+    { label: 'Check Application Status', action: 'link', target: '/applications' },
+  ]},
+]
+
+function MegaMenu({ onClose, setTab }: { onClose: () => void; setTab: (t: TabId) => void }) {
+  const [active, setActive] = useState(0)
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: C.white, zIndex: 100, overflowY: 'auto' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}` }}>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.navy, cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: 1.5 }}>✕ CLOSE</button>
+        <img src="/wh-emblem.png" alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none' }} />
+        <div style={{ width: 70 }} />
+      </div>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 28px', display: 'grid', gridTemplateColumns: '260px 1fr', gap: 40 }}>
+        <div>
+          {MEGA_MENU.map((cat, i) => (
+            <button key={cat.label} onMouseEnter={() => setActive(i)} onClick={() => setActive(i)} style={{
+              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+              padding: '14px 0', fontSize: 22, fontWeight: 700, fontFamily: 'Georgia, serif', cursor: 'pointer',
+              color: active === i ? C.navy : C.gray, borderBottom: `1px solid ${C.border}`,
+            }}>{cat.label} <span style={{ fontSize: 14, opacity: 0.5 }}>›</span></button>
+          ))}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
+          {MEGA_MENU[active].items.map(item => (
+            item.action === 'tab' ? (
+              <button key={item.label} onClick={() => { setTab(item.target as TabId); onClose() }} style={{
+                textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14,
+                fontWeight: 600, color: C.text, letterSpacing: 0.3, textTransform: 'uppercase', padding: '4px 0',
+              }}>{item.label}</button>
+            ) : (
+              <a key={item.label} href={item.target} target="_blank" rel="noopener noreferrer" style={{
+                fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: 0.3, textTransform: 'uppercase',
+                padding: '4px 0', textDecoration: 'none',
+              }}>{item.label} ↗</a>
+            )
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* ─── Header ────────────────────────────────────────────────────── */
 function Header({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
     <header style={{ background: C.white, borderBottom: `3px solid ${C.gold}` }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => setMenuOpen(o => !o)} style={{ background: 'none', border: 'none', color: C.navy, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={() => setMenuOpen(true)} style={{ background: 'none', border: 'none', color: C.navy, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
           <MenuIcon /> <span style={{ fontSize: 11, letterSpacing: 1.5, fontWeight: 700 }}>MENU</span>
         </button>
-        <Link to="/" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none' }}>
+        <Link to="/" onClick={() => setTab('home')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none' }}>
           <img src="/wh-emblem.png" alt="The White House" style={{ width: 46, height: 46, borderRadius: 6, objectFit: 'cover', marginBottom: 4 }} onError={e => { e.currentTarget.style.display = 'none' }} />
           <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, fontFamily: 'Georgia, serif', letterSpacing: 0.5 }}>THE WHITE HOUSE</div>
           <div style={{ fontSize: 8, letterSpacing: 2, color: C.gray, textTransform: 'uppercase' }}>OSFUSA Roblox RP</div>
@@ -110,8 +168,6 @@ function Header({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
         <HeaderSearch setTab={setTab} />
       </div>
       <div style={{ borderTop: `1px solid ${C.border}`, background: C.offWhite }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: menuOpen ? '10px 28px' : '0 28px', display: menuOpen ? 'flex' : 'none', flexWrap: 'wrap', gap: 4 }} className="wh-mobile-nav">
-        </div>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 28px', display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
@@ -122,6 +178,7 @@ function Header({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
           ))}
         </div>
       </div>
+      {menuOpen && <MegaMenu onClose={() => setMenuOpen(false)} setTab={setTab} />}
     </header>
   )
 }
@@ -365,11 +422,43 @@ function ApplicationsTab() {
 }
 
 /* ─── Page ──────────────────────────────────────────────────────── */
+/* ─── Intro video overlay ───────────────────────────────────────── */
+function IntroVideoOverlay() {
+  const [url, setUrl] = useState<string | null>(null)
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    if (sessionStorage.getItem('wh-intro-shown') === 'true') { setDismissed(true); return }
+    supabase.from('wh_settings').select('*').eq('key', 'intro_video_url').single().then(({ data }) => {
+      if (data?.value) setUrl(data.value)
+      else setDismissed(true)
+    })
+  }, [])
+
+  const dismiss = () => { sessionStorage.setItem('wh-intro-shown', 'true'); setDismissed(true) }
+
+  if (dismissed || !url) return null
+
+  return (
+    <div onClick={dismiss} onWheel={dismiss} style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 200, cursor: 'pointer' }}>
+      <video
+        src={url} autoPlay muted playsInline onEnded={dismiss}
+        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+      />
+      <button onClick={dismiss} style={{
+        position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)',
+        color: '#fff', padding: '8px 18px', borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: 'pointer',
+      }}>SKIP ✕</button>
+    </div>
+  )
+}
+
 function WHHome() {
   const [tab, setTab] = useState<TabId>('home')
 
   return (
     <div style={{ minHeight: '100vh', background: C.offWhite, fontFamily: 'system-ui, sans-serif' }}>
+      <IntroVideoOverlay />
       <Header tab={tab} setTab={setTab} />
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px' }}>
         {tab === 'home' && <HomeTab setTab={setTab} />}
