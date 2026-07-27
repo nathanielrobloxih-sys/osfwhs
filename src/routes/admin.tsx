@@ -75,7 +75,7 @@ function PostsTab() {
   const [editing, setEditing] = useState<any | null>(null)
   const blank = { category: 'news', title: '', body: '', image_url: '', eo_number: '', pinned: false }
 
-  const load = () => supabase.from('wh_posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).then(({ data }) => setPosts(data || []))
+  const load = () => { supabase.from('wh_posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).then(({ data }) => setPosts(data || [])) }
   useEffect(load, [])
 
   const save = async () => {
@@ -152,7 +152,7 @@ function GalleryTab() {
   const [imageUrl, setImageUrl] = useState('')
   const [caption, setCaption] = useState('')
 
-  const load = () => supabase.from('wh_gallery').select('*').order('created_at', { ascending: false }).then(({ data }) => setItems(data || []))
+  const load = () => { supabase.from('wh_gallery').select('*').order('created_at', { ascending: false }).then(({ data }) => setItems(data || [])) }
   useEffect(load, [])
 
   const add = async () => {
@@ -193,7 +193,7 @@ function LeadershipTab() {
   const [photoUrl, setPhotoUrl] = useState('')
   const [order, setOrder] = useState('0')
 
-  const load = () => supabase.from('wh_leadership').select('*').order('sort_order', { ascending: true }).then(({ data }) => setPeople(data || []))
+  const load = () => { supabase.from('wh_leadership').select('*').order('sort_order', { ascending: true }).then(({ data }) => setPeople(data || [])) }
   useEffect(load, [])
 
   const add = async () => {
@@ -277,7 +277,7 @@ function PositionsTab() {
 /* ─── Applications tab ──────────────────────────────────────────── */
 function ApplicationsTab() {
   const [apps, setApps] = useState<any[]>([])
-  const load = () => supabase.from('wh_applications').select('*').order('submitted_at', { ascending: false }).then(({ data }) => setApps(data || []))
+  const load = () => { supabase.from('wh_applications').select('*').order('submitted_at', { ascending: false }).then(({ data }) => setApps(data || [])) }
   useEffect(load, [])
 
   const updateStatus = async (id: string, status: string) => {
@@ -354,7 +354,7 @@ function RolesTab() {
   const [newName, setNewName] = useState('')
   const [newPerms, setNewPerms] = useState<string[]>([])
 
-  const load = () => supabase.from('wh_admin_roles').select('*').order('name').then(({ data }) => setRoles(data || []))
+  const load = () => { supabase.from('wh_admin_roles').select('*').order('name').then(({ data }) => setRoles(data || [])) }
   useEffect(load, [])
 
   const createRole = async () => {
@@ -580,4 +580,5 @@ function AdminPanel() {
       </main>
     </div>
   )
+}
 }
