@@ -2,331 +2,146 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export const Route = createFileRoute('/')({ component: WHHome })
+export const Route = createFileRoute('/admin')({ component: AdminPanel })
 
-const TABS = [
-  { id: 'home',         label: 'Home' },
-  { id: 'news',         label: 'News' },
-  { id: 'eo',           label: 'Executive Orders' },
-  { id: 'memo',         label: 'Memos' },
-  { id: 'gallery',      label: 'Gallery' },
-  { id: 'applications', label: 'The White House' },
-] as const
+type Tab = 'posts' | 'gallery' | 'leadership' | 'positions' | 'applications' | 'settings' | 'roles' | 'staff'
 
-type TabId = 'home' | 'news' | 'eo' | 'memo' | 'gallery' | 'leadership' | 'applications'
-
-const C = {
-  navy: '#0a2240', navyDark: '#061530', navyLight: '#123457',
-  gold: '#b8962e', goldLight: '#e8d9a8',
-  white: '#ffffff', offWhite: '#f7f8fa', lightGray: '#eceef2',
-  gray: '#6b7280', darkGray: '#1f2937', border: '#d7dbe3',
-  text: '#111827', textMuted: '#4b5563',
-}
-
-type Post = {
-  id: string
-  category: 'news' | 'eo' | 'memo'
-  title: string
-  body: string
-  image_url?: string | null
-  eo_number?: string | null
-  source?: string | null
-  pinned?: boolean
-  created_at: string
-}
-
-/* ─── Icons ─────────────────────────────────────────────────────── */
-function MenuIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
-    </svg>
-  )
-}
-function SearchIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" />
-    </svg>
-  )
-}
-
-/* ─── Header search ─────────────────────────────────────────────── */
-function HeaderSearch({ setTab }: { setTab: (t: TabId) => void }) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Post[]>([])
-  const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    if (!query.trim()) { setResults([]); return }
-    const t = setTimeout(() => {
-      supabase.from('wh_posts').select('*').ilike('title', `%${query}%`).limit(5).then(({ data }) => setResults(data || []))
-    }, 250)
-    return () => clearTimeout(t)
-  }, [query])
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
-        <SearchIcon />
-        <span style={{ fontSize: 11, letterSpacing: 1.5, fontWeight: 700 }}>SEARCH</span>
-      </div>
-      {open && (
-        <div style={{ position: 'absolute', top: '130%', right: 0, width: 260, background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 10px 30px rgba(10,34,64,0.18)', padding: 10, zIndex: 30 }}>
-          <input autoFocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Search the site..."
-            style={{ width: '100%', border: `1px solid ${C.border}`, borderRadius: 6, padding: '8px 10px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
-          {results.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              {results.map(r => (
-                <button key={r.id} onMouseDown={() => { setTab(r.category as TabId); setQuery(''); setOpen(false) }}
-                  style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: '8px 6px', cursor: 'pointer', borderBottom: `1px solid ${C.lightGray}` }}>
-                  <div style={{ fontSize: 10, color: C.gray, textTransform: 'uppercase' }}>{r.category}</div>
-                  <div style={{ fontSize: 13, color: C.text, fontWeight: 600 }}>{r.title}</div>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
-/* ─── Mega menu ─────────────────────────────────────────────────── */
-const MEGA_MENU: { label: string; items: { label: string; action: 'tab' | 'link'; target: string }[] }[] = [
-  { label: 'News', items: [
-    { label: 'Latest News', action: 'tab', target: 'news' },
-    { label: 'Executive Orders', action: 'tab', target: 'eo' },
-    { label: 'Memos', action: 'tab', target: 'memo' },
-  ]},
-  { label: 'Media', items: [
-    { label: 'Photo Gallery', action: 'tab', target: 'gallery' },
-    { label: 'Livestream (C-SPAN)', action: 'link', target: 'https://osfcspan.netlify.app' },
-  ]},
-  { label: 'Administration', items: [
-    { label: 'Leadership', action: 'tab', target: 'leadership' },
-  ]},
-  { label: 'Get Involved', items: [
-    { label: 'The White House', action: 'tab', target: 'applications' },
-    { label: 'Check Application Status', action: 'link', target: '/applications' },
-  ]},
+const ALL_TABS: { id: Tab; label: string; ownerOnly?: boolean }[] = [
+  { id: 'posts', label: 'Posts' },
+  { id: 'gallery', label: 'Gallery' },
+  { id: 'leadership', label: 'Leadership' },
+  { id: 'positions', label: 'Positions' },
+  { id: 'applications', label: 'Applications' },
+  { id: 'settings', label: 'Settings' },
+  { id: 'roles', label: 'Roles', ownerOnly: true },
+  { id: 'staff', label: 'Staff', ownerOnly: true },
 ]
 
-function MegaMenu({ onClose, setTab }: { onClose: () => void; setTab: (t: TabId) => void }) {
-  const [active, setActive] = useState(0)
+const C = {
+  navy: '#0a2240', navyDark: '#061530', gold: '#b8962e',
+  red: '#c53030', green: '#1a4a2a',
+  redText: '#f08080', card: '#0c1c33', cardBorder: '#2a3a56',
+  input: '#071020', text: '#c8d8f0', muted: '#6a8aaa',
+}
+
+const inp: React.CSSProperties = {
+  width: '100%', background: C.input, border: `1px solid ${C.cardBorder}`, borderRadius: 6,
+  padding: '9px 12px', fontSize: 13, color: C.text, outline: 'none', boxSizing: 'border-box',
+}
+const btn = (bg: string): React.CSSProperties => ({
+  background: bg, color: '#fff', border: 'none', borderRadius: 6, padding: '9px 16px',
+  fontSize: 13, fontWeight: 600, cursor: 'pointer',
+})
+
+/* ─── Login ─────────────────────────────────────────────────────── */
+function LoginScreen({ onAuthed }: { onAuthed: (role: string) => void }) {
+  const [email, setEmail] = useState('')
+  const [pw, setPw] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const login = async () => {
+    if (!email || !pw) { setError('Please enter your email and password.'); return }
+    setLoading(true); setError('')
+    const { data, error: authErr } = await supabase.auth.signInWithPassword({ email, password: pw })
+    if (authErr || !data.session) { setLoading(false); setError('Incorrect email or password.'); return }
+    const { data: profile } = await supabase.from('wh_staff_profiles').select('role').eq('id', data.session.user.id).single()
+    setLoading(false)
+    onAuthed(profile?.role || 'Owner')
+  }
+
   return (
-    <div style={{ position: 'fixed', inset: 0, background: C.white, zIndex: 100, overflowY: 'auto' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}` }}>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: C.navy, cursor: 'pointer', fontSize: 12, fontWeight: 700, letterSpacing: 1.5 }}>✕ CLOSE</button>
-        <img src="/wh-emblem.png" alt="" style={{ width: 40, height: 40, borderRadius: 6, objectFit: 'cover' }} onError={e => { e.currentTarget.style.display = 'none' }} />
-        <div style={{ width: 70 }} />
-      </div>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 28px', display: 'grid', gridTemplateColumns: '260px 1fr', gap: 40 }}>
-        <div>
-          {MEGA_MENU.map((cat, i) => (
-            <button key={cat.label} onMouseEnter={() => setActive(i)} onClick={() => setActive(i)} style={{
-              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
-              padding: '14px 0', fontSize: 22, fontWeight: 700, fontFamily: 'Georgia, serif', cursor: 'pointer',
-              color: active === i ? C.navy : C.gray, borderBottom: `1px solid ${C.border}`,
-            }}>{cat.label} <span style={{ fontSize: 14, opacity: 0.5 }}>›</span></button>
-          ))}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 8 }}>
-          {MEGA_MENU[active].items.map(item => (
-            item.action === 'tab' ? (
-              <button key={item.label} onClick={() => { setTab(item.target as TabId); onClose() }} style={{
-                textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14,
-                fontWeight: 600, color: C.text, letterSpacing: 0.3, textTransform: 'uppercase', padding: '4px 0',
-              }}>{item.label}</button>
-            ) : (
-              <a key={item.label} href={item.target} target="_blank" rel="noopener noreferrer" style={{
-                fontSize: 14, fontWeight: 600, color: C.text, letterSpacing: 0.3, textTransform: 'uppercase',
-                padding: '4px 0', textDecoration: 'none',
-              }}>{item.label} ↗</a>
-            )
-          ))}
+    <div style={{ minHeight: '100vh', background: `linear-gradient(135deg, ${C.navyDark} 0%, #0d1b33 55%, #1a1030 100%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'sans-serif' }}>
+      <div style={{ width: 340, background: 'rgba(12,28,51,0.9)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 28, boxShadow: '0 12px 40px rgba(0,0,0,0.35)' }}>
+        <img src="/wh-emblem.png" alt="" style={{ width: 56, margin: '0 auto 10px', display: 'block', borderRadius: 6 }} onError={e => { e.currentTarget.style.display = 'none' }} />
+        <div style={{ fontSize: 11, letterSpacing: 2, color: C.muted, marginBottom: 4, textAlign: 'center' }}>OSFUSA</div>
+        <div style={{ fontSize: 20, fontWeight: 700, color: '#fff', textAlign: 'center', marginBottom: 20, fontFamily: 'Georgia, serif' }}>White House Admin</div>
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input style={{ ...inp, marginBottom: 14 }} placeholder="Password" type="password" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === 'Enter' && login()} />
+        {error && <div style={{ color: C.redText, fontSize: 12, marginBottom: 12 }}>{error}</div>}
+        <button style={{ ...btn(C.navy), width: '100%' }} onClick={login} disabled={loading}>{loading ? 'Checking...' : 'Log In'}</button>
+        <div style={{ textAlign: 'center', marginTop: 16 }}>
+          <Link to="/" style={{ fontSize: 12, color: C.muted, textDecoration: 'none' }}>← Back to site</Link>
         </div>
       </div>
     </div>
   )
 }
 
-/* ─── Header ────────────────────────────────────────────────────── */
-function Header({ tab, setTab }: { tab: TabId; setTab: (t: TabId) => void }) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  return (
-    <header style={{ background: C.white, borderBottom: `3px solid ${C.gold}` }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <button onClick={() => setMenuOpen(true)} style={{ background: 'none', border: 'none', color: C.navy, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <MenuIcon /> <span style={{ fontSize: 11, letterSpacing: 1.5, fontWeight: 700 }}>MENU</span>
-        </button>
-        <Link to="/" onClick={() => setTab('home')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none' }}>
-          <img src="/wh-emblem.png" alt="The White House" style={{ width: 46, height: 46, borderRadius: 6, objectFit: 'cover', marginBottom: 4 }} onError={e => { e.currentTarget.style.display = 'none' }} />
-          <div style={{ fontSize: 15, fontWeight: 700, color: C.navy, fontFamily: 'Georgia, serif', letterSpacing: 0.5 }}>THE WHITE HOUSE</div>
-          <div style={{ fontSize: 8, letterSpacing: 2, color: C.gray, textTransform: 'uppercase' }}>OSFUSA Roblox RP</div>
-        </Link>
-        <HeaderSearch setTab={setTab} />
-      </div>
-      <div style={{ borderTop: `1px solid ${C.border}`, background: C.offWhite }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 28px', display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} style={{
-              background: 'transparent', border: 'none', borderBottom: tab === t.id ? `2px solid ${C.gold}` : '2px solid transparent',
-              color: tab === t.id ? C.navy : C.textMuted, padding: '12px 14px', fontSize: 12, cursor: 'pointer',
-              fontWeight: tab === t.id ? 700 : 600, letterSpacing: 0.8, textTransform: 'uppercase',
-            }}>{t.label}</button>
-          ))}
-        </div>
-      </div>
-      {menuOpen && <MegaMenu onClose={() => setMenuOpen(false)} setTab={setTab} />}
-    </header>
-  )
-}
+/* ─── Posts tab ─────────────────────────────────────────────────── */
+function PostsTab() {
+  const [posts, setPosts] = useState<any[]>([])
+  const [filter, setFilter] = useState<'all' | 'news' | 'eo' | 'memo'>('all')
+  const [editing, setEditing] = useState<any | null>(null)
+  const blank = { category: 'news', title: '', body: '', image_url: '', eo_number: '', pinned: false }
 
-/* ─── Footer ────────────────────────────────────────────────────── */
-function SiteFooter() {
-  return (
-    <footer style={{ background: C.navyDark, color: C.goldLight, padding: '30px 24px', marginTop: 60, textAlign: 'center', fontSize: 12 }}>
-      <div style={{ fontFamily: 'Georgia, serif', fontSize: 14, marginBottom: 6 }}>THE WHITE HOUSE</div>
-      <div style={{ opacity: 0.75 }}>OSFUSA Roleplay network. Not affiliated with the real White House or U.S. government.</div>
-      <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.12)' }}>
-        <Link to="/admin" style={{ color: 'rgba(232,217,168,0.6)', fontSize: 11, textDecoration: 'none' }}>Staff Login</Link>
-      </div>
-    </footer>
-  )
-}
+  const load = () => { supabase.from('wh_posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).then(({ data }) => setPosts(data || [])) }
+  useEffect(load, [])
 
-/* ─── Post feed (News / Memos) ──────────────────────────────────── */
-function PostFeed({ category, accent }: { category: Post['category']; accent: string }) {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
+  const save = async () => {
+    if (!editing.title.trim() || !editing.body.trim()) return
+    const payload = { category: editing.category, title: editing.title, body: editing.body, image_url: editing.image_url || null, eo_number: editing.category === 'eo' ? (editing.eo_number || null) : null, pinned: editing.pinned }
+    if (editing.id) await supabase.from('wh_posts').update(payload).eq('id', editing.id)
+    else await supabase.from('wh_posts').insert({ ...payload, source: 'web' })
+    setEditing(null); load()
+  }
+  const del = async (id: string) => { if (confirm('Delete this post?')) { await supabase.from('wh_posts').delete().eq('id', id); load() } }
 
-  useEffect(() => {
-    supabase.from('wh_posts').select('*').eq('category', category)
-      .order('pinned', { ascending: false }).order('created_at', { ascending: false })
-      .then(({ data }) => { setPosts(data || []); setLoading(false) })
-  }, [category])
-
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.gray }}>Loading…</div>
-  if (posts.length === 0) return <div style={{ padding: 40, textAlign: 'center', color: C.gray }}>Nothing posted here yet.</div>
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {posts.map(p => (
-        <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderLeft: `4px solid ${accent}`, borderRadius: 6, padding: '20px 22px', boxShadow: '0 2px 8px rgba(10,34,64,0.05)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            {p.eo_number && <span style={{ fontSize: 10, fontWeight: 700, color: C.white, background: accent, borderRadius: 3, padding: '2px 8px', letterSpacing: 0.5 }}>EXEC. ORDER NO. {p.eo_number}</span>}
-            {p.pinned && <span style={{ fontSize: 10, fontWeight: 700, color: accent, border: `1px solid ${accent}`, borderRadius: 3, padding: '1px 7px' }}>PINNED</span>}
-            <span style={{ fontSize: 11, color: C.gray }}>{new Date(p.created_at).toLocaleString()}</span>
-          </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 8, fontFamily: 'Georgia, serif' }}>{p.title}</div>
-          {p.image_url && <img src={p.image_url} alt="" style={{ width: '100%', borderRadius: 6, marginBottom: 10 }} />}
-          <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{p.body}</div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-/* ─── Stat box ──────────────────────────────────────────────────── */
-function StatBox({ label, value, accent, onClick }: { label: string; value: string; accent: string; onClick?: () => void }) {
-  const Tag = onClick ? 'button' : 'div'
-  return (
-    <Tag onClick={onClick} style={{
-      background: C.white, border: `1px solid ${C.border}`, borderTop: `3px solid ${accent}`, borderRadius: 10,
-      padding: '16px 18px', textAlign: 'left', cursor: onClick ? 'pointer' : 'default',
-      boxShadow: '0 2px 10px rgba(10,34,64,0.06)', fontFamily: 'inherit',
-    }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: C.darkGray }}>{value}</div>
-    </Tag>
-  )
-}
-
-/* ─── Home tab ──────────────────────────────────────────────────── */
-function HomeTab({ setTab }: { setTab: (t: TabId) => void }) {
-  const [featured, setFeatured] = useState<Post | null>(null)
-  const [recent, setRecent] = useState<Post[]>([])
-  const [counts, setCounts] = useState<Record<string, number>>({})
-
-  useEffect(() => {
-    supabase.from('wh_posts').select('*').order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(1)
-      .then(({ data }) => setFeatured(data?.[0] || null))
-    supabase.from('wh_posts').select('*').order('created_at', { ascending: false }).limit(6)
-      .then(({ data }) => setRecent(data || []))
-    supabase.from('wh_posts').select('category').then(({ data }) => {
-      const c: Record<string, number> = {}
-      ;(data || []).forEach((p: any) => { c[p.category] = (c[p.category] || 0) + 1 })
-      setCounts(c)
-    })
-  }, [])
-
-  const accentFor = (cat: string) => cat === 'eo' ? C.gold : cat === 'memo' ? C.navyLight : C.navy
+  const shown = filter === 'all' ? posts : posts.filter(p => p.category === filter)
+  const labelFor = (f: string) => f === 'eo' ? 'Executive Orders' : f === 'memo' ? 'Memos' : f === 'news' ? 'News' : 'All'
 
   return (
     <div>
-      {/* Featured hero */}
-      <div style={{ background: C.white, borderRadius: 16, padding: 24, boxShadow: '0 6px 24px rgba(10,34,64,0.10)', border: `1px solid ${C.border}`, marginBottom: 24 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: featured?.image_url ? '1fr 1fr' : '1fr', gap: 28, alignItems: 'center' }}>
-          <div>
-            <div style={{ display: 'inline-block', fontSize: 11, fontWeight: 700, color: '#fff', letterSpacing: 1.5, marginBottom: 12, background: featured ? accentFor(featured.category) : C.navy, borderRadius: 20, padding: '4px 12px' }}>
-              {featured ? (featured.category === 'eo' ? 'EXECUTIVE ORDER' : featured.category === 'memo' ? 'MEMO' : 'FEATURED') : 'OSFUSA WHITE HOUSE'}
-            </div>
-            <div style={{ fontSize: 30, fontWeight: 700, color: C.navyDark, fontFamily: 'Georgia, serif', lineHeight: 1.15, marginBottom: 14 }}>
-              {featured ? featured.title : 'Serving the American people'}
-            </div>
-            <div style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 20 }}>
-              {featured ? featured.body.slice(0, 140) + (featured.body.length > 140 ? '...' : '') : 'News, executive orders, and official memos from the White House.'}
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button onClick={() => setTab(featured ? (featured.category as TabId) : 'news')} style={{ background: C.navy, color: C.white, border: 'none', borderRadius: 6, padding: '11px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                Read more
-              </button>
-              <button onClick={() => setTab('leadership')} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.navy, borderRadius: 6, padding: '11px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
-                Meet Leadership
-              </button>
-            </div>
-          </div>
-          {featured?.image_url && (
-            <div style={{ position: 'relative', borderRadius: 12, overflow: 'hidden', height: 240, boxShadow: '0 8px 30px rgba(10,34,64,0.18)' }}>
-              <img src={featured.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            </div>
-          )}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {(['all', 'news', 'eo', 'memo'] as const).map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{ ...btn(filter === f ? C.navy : '#132743'), padding: '6px 14px' }}>{labelFor(f)}</button>
+          ))}
         </div>
+        <button style={btn(C.green)} onClick={() => setEditing({ ...blank })}>+ New Post</button>
       </div>
 
-      {/* Quick stat boxes */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 28 }}>
-        <StatBox label="News" value={`${counts.news || 0} posted`} accent={C.navy} onClick={() => setTab('news')} />
-        <StatBox label="Executive Orders" value={`${counts.eo || 0} issued`} accent={C.gold} onClick={() => setTab('eo')} />
-        <StatBox label="Memos" value={`${counts.memo || 0} released`} accent={C.navyLight} onClick={() => setTab('memo')} />
-        <StatBox label="Join the Staff" value="View openings" accent={C.gold} onClick={() => setTab('applications')} />
-      </div>
-
-      {/* Recent posts */}
-      {recent.length > 0 && (
-        <div>
-          <h3 style={{ fontSize: 13, fontWeight: 700, color: C.darkGray, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1 }}>Recent updates</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {recent.map(p => (
-              <button key={p.id} onClick={() => setTab(p.category as TabId)} style={{
-                textAlign: 'left', display: 'flex', gap: 14, alignItems: 'center', background: C.white,
-                border: `1px solid ${C.border}`, borderLeft: `4px solid ${accentFor(p.category)}`, borderRadius: 8,
-                padding: '14px 18px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(10,34,64,0.05)',
-              }}>
-                {p.image_url && <img src={p.image_url} alt="" style={{ width: 64, height: 64, borderRadius: 6, objectFit: 'cover', flexShrink: 0 }} />}
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: accentFor(p.category), textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 3 }}>
-                    {p.category === 'eo' ? `Executive Order${p.eo_number ? ' No. ' + p.eo_number : ''}` : p.category === 'memo' ? 'Memo' : 'News'}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{p.title}</div>
-                  <div style={{ fontSize: 11, color: C.gray, marginTop: 2 }}>{new Date(p.created_at).toLocaleDateString()}</div>
-                </div>
-              </button>
-            ))}
+      {editing && (
+        <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 18, marginBottom: 18 }}>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+            <select style={inp} value={editing.category} onChange={e => setEditing({ ...editing, category: e.target.value })}>
+              <option value="news">News</option>
+              <option value="eo">Executive Order</option>
+              <option value="memo">Memo</option>
+            </select>
+            {editing.category === 'eo' && (
+              <input style={{ ...inp, maxWidth: 160 }} placeholder="EO Number (e.g. 14001)" value={editing.eo_number} onChange={e => setEditing({ ...editing, eo_number: e.target.value })} />
+            )}
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, color: C.text, fontSize: 13 }}>
+              <input type="checkbox" checked={editing.pinned} onChange={e => setEditing({ ...editing, pinned: e.target.checked })} /> Pinned
+            </label>
+          </div>
+          <input style={{ ...inp, marginBottom: 10 }} placeholder="Title" value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} />
+          <textarea style={{ ...inp, minHeight: 100, marginBottom: 10, resize: 'vertical' }} placeholder="Body" value={editing.body} onChange={e => setEditing({ ...editing, body: e.target.value })} />
+          <input style={{ ...inp, marginBottom: 10 }} placeholder="Image URL (optional)" value={editing.image_url} onChange={e => setEditing({ ...editing, image_url: e.target.value })} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button style={btn(C.navy)} onClick={save}>Save</button>
+            <button style={btn('#333')} onClick={() => setEditing(null)}>Cancel</button>
           </div>
         </div>
       )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {shown.map(p => (
+          <div key={p.id} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', letterSpacing: 1 }}>{labelFor(p.category)} {p.eo_number && `· No. ${p.eo_number}`} {p.pinned && '· pinned'}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: '4px 0' }}>{p.title}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>{new Date(p.created_at).toLocaleString()}</div>
+            </div>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <button style={btn('#2a3a5a')} onClick={() => setEditing(p)}>Edit</button>
+              <button style={btn(C.red)} onClick={() => del(p.id)}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {shown.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: 30 }}>No posts.</div>}
+      </div>
     </div>
   )
 }
@@ -334,18 +149,38 @@ function HomeTab({ setTab }: { setTab: (t: TabId) => void }) {
 /* ─── Gallery tab ───────────────────────────────────────────────── */
 function GalleryTab() {
   const [items, setItems] = useState<any[]>([])
-  useEffect(() => {
-    supabase.from('wh_gallery').select('*').order('created_at', { ascending: false }).then(({ data }) => setItems(data || []))
-  }, [])
-  if (items.length === 0) return <div style={{ padding: 40, textAlign: 'center', color: C.gray }}>No photos yet.</div>
+  const [imageUrl, setImageUrl] = useState('')
+  const [caption, setCaption] = useState('')
+
+  const load = () => { supabase.from('wh_gallery').select('*').order('created_at', { ascending: false }).then(({ data }) => setItems(data || [])) }
+  useEffect(load, [])
+
+  const add = async () => {
+    if (!imageUrl.trim()) return
+    await supabase.from('wh_gallery').insert({ image_url: imageUrl.trim(), caption: caption.trim() || null })
+    setImageUrl(''); setCaption(''); load()
+  }
+  const del = async (id: string) => { if (confirm('Delete this photo?')) { await supabase.from('wh_gallery').delete().eq('id', id); load() } }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
-      {items.map(g => (
-        <div key={g.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 2px 8px rgba(10,34,64,0.06)' }}>
-          <img src={g.image_url} alt={g.caption || ''} style={{ width: '100%', height: 160, objectFit: 'cover' }} />
-          {g.caption && <div style={{ padding: '10px 12px', fontSize: 13, color: C.textMuted }}>{g.caption}</div>}
-        </div>
-      ))}
+    <div>
+      <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 18, marginBottom: 18, maxWidth: 480 }}>
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Image URL" value={imageUrl} onChange={e => setImageUrl(e.target.value)} />
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Caption (optional)" value={caption} onChange={e => setCaption(e.target.value)} />
+        <button style={btn(C.green)} onClick={add}>+ Add photo</button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 14 }}>
+        {items.map(g => (
+          <div key={g.id} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, overflow: 'hidden' }}>
+            <img src={g.image_url} alt="" style={{ width: '100%', height: 110, objectFit: 'cover' }} />
+            <div style={{ padding: 10 }}>
+              {g.caption && <div style={{ fontSize: 12, color: C.text, marginBottom: 8 }}>{g.caption}</div>}
+              <button style={{ ...btn(C.red), width: '100%' }} onClick={() => del(g.id)}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {items.length === 0 && <div style={{ color: C.muted }}>No photos yet.</div>}
+      </div>
     </div>
   )
 }
@@ -353,123 +188,405 @@ function GalleryTab() {
 /* ─── Leadership tab ────────────────────────────────────────────── */
 function LeadershipTab() {
   const [people, setPeople] = useState<any[]>([])
-  useEffect(() => {
-    supabase.from('wh_leadership').select('*').order('sort_order', { ascending: true }).then(({ data }) => setPeople(data || []))
-  }, [])
-  if (people.length === 0) return <div style={{ padding: 40, textAlign: 'center', color: C.gray }}>Leadership roster coming soon.</div>
+  const [name, setName] = useState('')
+  const [title, setTitle] = useState('')
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [order, setOrder] = useState('0')
+
+  const load = () => { supabase.from('wh_leadership').select('*').order('sort_order', { ascending: true }).then(({ data }) => setPeople(data || [])) }
+  useEffect(load, [])
+
+  const add = async () => {
+    if (!name.trim() || !title.trim()) return
+    await supabase.from('wh_leadership').insert({ name: name.trim(), title: title.trim(), photo_url: photoUrl.trim() || null, sort_order: Number(order) || 0 })
+    setName(''); setTitle(''); setPhotoUrl(''); setOrder('0'); load()
+  }
+  const del = async (id: string) => { if (confirm('Remove this person?')) { await supabase.from('wh_leadership').delete().eq('id', id); load() } }
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 18 }}>
-      {people.map(p => (
-        <div key={p.id} style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', textAlign: 'center', boxShadow: '0 2px 8px rgba(10,34,64,0.06)' }}>
-          <div style={{ width: '100%', height: 170, background: C.lightGray, overflow: 'hidden' }}>
-            {p.photo_url
-              ? <img src={p.photo_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.gray, fontSize: 32, fontFamily: 'Georgia, serif' }}>{p.name?.[0]}</div>}
+    <div>
+      <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 18, marginBottom: 18, maxWidth: 480 }}>
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Name" value={name} onChange={e => setName(e.target.value)} />
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Title (e.g. Chief of Staff)" value={title} onChange={e => setTitle(e.target.value)} />
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Photo URL (optional)" value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} />
+        <input style={{ ...inp, marginBottom: 10 }} placeholder="Sort order (lower = first)" value={order} onChange={e => setOrder(e.target.value)} />
+        <button style={btn(C.green)} onClick={add}>+ Add to roster</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {people.map(p => (
+          <div key={p.id} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{p.name}</div>
+              <div style={{ fontSize: 12, color: C.muted }}>{p.title}</div>
+            </div>
+            <button style={btn(C.red)} onClick={() => del(p.id)}>Remove</button>
           </div>
-          <div style={{ padding: '12px 10px' }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: C.text }}>{p.name}</div>
-            <div style={{ fontSize: 12, color: C.gold, fontWeight: 600, marginTop: 2 }}>{p.title}</div>
-          </div>
-        </div>
-      ))}
+        ))}
+        {people.length === 0 && <div style={{ color: C.muted }}>No one on the roster yet.</div>}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Positions tab ─────────────────────────────────────────────── */
+function PositionsTab() {
+  const [text, setText] = useState('')
+  const [appStatus, setAppStatus] = useState('open')
+  const [closedMsg, setClosedMsg] = useState('')
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    supabase.from('wh_settings').select('*').in('key', ['open_positions', 'app_status', 'app_closed_message']).then(({ data }) => {
+      data?.forEach((row: any) => {
+        if (row.key === 'open_positions') setText(row.value || '')
+        if (row.key === 'app_status') setAppStatus(row.value || 'open')
+        if (row.key === 'app_closed_message') setClosedMsg(row.value || '')
+      })
+    })
+  }, [])
+
+  const save = async () => {
+    await supabase.from('wh_settings').upsert({ key: 'open_positions', value: text }, { onConflict: 'key' })
+    await supabase.from('wh_settings').upsert({ key: 'app_status', value: appStatus }, { onConflict: 'key' })
+    await supabase.from('wh_settings').upsert({ key: 'app_closed_message', value: closedMsg }, { onConflict: 'key' })
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Open positions</div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 10, lineHeight: 1.6 }}>
+        One position per line: <code>Title | short description</code>
+      </div>
+      <textarea style={{ ...inp, minHeight: 140, resize: 'vertical', marginBottom: 16 }} value={text} onChange={e => setText(e.target.value)}
+        placeholder={'Press Secretary | Deliver daily briefings to the press corps\nIntern | Assist staff with day-to-day operations'} />
+
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 8 }}>Applications</div>
+      <select style={{ ...inp, marginBottom: 10 }} value={appStatus} onChange={e => setAppStatus(e.target.value)}>
+        <option value="open">Open</option>
+        <option value="closed">Closed</option>
+      </select>
+      <textarea style={{ ...inp, minHeight: 60, marginBottom: 10 }} placeholder="Closed message" value={closedMsg} onChange={e => setClosedMsg(e.target.value)} />
+
+      <button style={btn(C.navy)} onClick={save}>Save</button>
+      {saved && <span style={{ color: '#9ae6b4', marginLeft: 12, fontSize: 13 }}>Saved ✓</span>}
     </div>
   )
 }
 
 /* ─── Applications tab ──────────────────────────────────────────── */
 function ApplicationsTab() {
-  const [positions, setPositions] = useState<{ title: string; desc: string }[]>([])
+  const [apps, setApps] = useState<any[]>([])
+  const load = () => { supabase.from('wh_applications').select('*').order('submitted_at', { ascending: false }).then(({ data }) => setApps(data || [])) }
+  useEffect(load, [])
+
+  const updateStatus = async (id: string, status: string) => {
+    await supabase.from('wh_applications').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
+    load()
+  }
+  const saveNotes = async (id: string, notes: string) => {
+    await supabase.from('wh_applications').update({ notes, updated_at: new Date().toISOString() }).eq('id', id)
+    load()
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {apps.map(a => (
+        <div key={a.id} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#fff', fontSize: 14 }}>{a.roblox_username} <span style={{ color: C.muted, fontWeight: 400, fontSize: 12 }}>· {a.discord_username}</span></div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{a.position} · {new Date(a.submitted_at).toLocaleDateString()}</div>
+            </div>
+            <select style={{ ...inp, width: 150 }} value={a.status} onChange={e => updateStatus(a.id, e.target.value)}>
+              {['Submitted', 'Processing', 'Waitlisted', 'Accepted', 'Denied', 'Suspended'].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <details style={{ marginTop: 10 }}>
+            <summary style={{ fontSize: 12, color: C.muted, cursor: 'pointer' }}>View full application</summary>
+            <div style={{ fontSize: 12, color: C.text, marginTop: 8, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+              <div><strong>Experience:</strong> {a.wh_experience}</div>
+              <div><strong>Strength / weakness:</strong> {a.strength_weakness}</div>
+              <div><strong>Why hire:</strong> {a.why_hire}</div>
+            </div>
+          </details>
+          <textarea style={{ ...inp, marginTop: 10, minHeight: 50 }} placeholder="Staff notes..." defaultValue={a.notes || ''} onBlur={e => saveNotes(a.id, e.target.value)} />
+        </div>
+      ))}
+      {apps.length === 0 && <div style={{ color: C.muted, textAlign: 'center', padding: 30 }}>No applications yet.</div>}
+    </div>
+  )
+}
+
+/* ─── Settings tab ──────────────────────────────────────────────── */
+function SettingsTab() {
+  const [invite, setInvite] = useState('')
+  const [introVideo, setIntroVideo] = useState('')
+  const [saved, setSaved] = useState(false)
+
   useEffect(() => {
-    supabase.from('wh_settings').select('*').eq('key', 'open_positions').single().then(({ data }) => {
-      const raw = data?.value || ''
-      const list = raw.split('\n').map((l: string) => l.trim()).filter(Boolean).map((l: string) => {
-        const [title, ...rest] = l.split('|')
-        return { title: title.trim(), desc: rest.join('|').trim() }
+    supabase.from('wh_settings').select('*').in('key', ['discord_invite', 'intro_video_url']).then(({ data }) => {
+      data?.forEach((row: any) => {
+        if (row.key === 'discord_invite') setInvite(row.value)
+        if (row.key === 'intro_video_url') setIntroVideo(row.value)
       })
-      setPositions(list)
     })
   }, [])
 
+  const save = async () => {
+    await supabase.from('wh_settings').upsert({ key: 'discord_invite', value: invite }, { onConflict: 'key' })
+    await supabase.from('wh_settings').upsert({ key: 'intro_video_url', value: introVideo }, { onConflict: 'key' })
+    setSaved(true); setTimeout(() => setSaved(false), 2000)
+  }
+
   return (
-    <div>
-      <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, padding: 28, marginBottom: 20 }}>
-        <h2 style={{ fontFamily: 'Georgia, serif', fontSize: 22, color: C.navy, marginBottom: 8 }}>Join the White House Staff</h2>
-        <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.7 }}>
-          Interested in serving on the White House staff? Review current openings below, then
-          submit an application.
-        </p>
+    <div style={{ maxWidth: 480 }}>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Discord invite link (optional, shown in footer)</div>
+      <input style={{ ...inp, marginBottom: 14 }} value={invite} onChange={e => setInvite(e.target.value)} placeholder="https://discord.gg/..." />
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Homepage intro video URL (direct .mp4 link - plays full-screen once per visit, leave blank to disable)</div>
+      <input style={{ ...inp, marginBottom: 14 }} value={introVideo} onChange={e => setIntroVideo(e.target.value)} placeholder="https://.../intro.mp4" />
+      <button style={btn(C.navy)} onClick={save}>Save</button>
+      {saved && <span style={{ color: '#9ae6b4', marginLeft: 12, fontSize: 13 }}>Saved ✓</span>}
+    </div>
+  )
+}
+
+/* ─── Roles tab (Owner only) ────────────────────────────────────── */
+const PERMISSION_TABS = ALL_TABS.filter(t => !t.ownerOnly)
+
+function togglePermArr(perms: string[], id: string) {
+  return perms.includes(id) ? perms.filter(p => p !== id) : [...perms, id]
+}
+
+function RolesTab() {
+  const [roles, setRoles] = useState<any[]>([])
+  const [newName, setNewName] = useState('')
+  const [newPerms, setNewPerms] = useState<string[]>([])
+
+  const load = () => { supabase.from('wh_admin_roles').select('*').order('name').then(({ data }) => setRoles(data || [])) }
+  useEffect(load, [])
+
+  const createRole = async () => {
+    if (!newName.trim()) return
+    await supabase.from('wh_admin_roles').insert({ name: newName.trim(), permissions: newPerms })
+    setNewName(''); setNewPerms([]); load()
+  }
+  const updateRolePerms = async (role: any, perms: string[]) => {
+    await supabase.from('wh_admin_roles').update({ permissions: perms }).eq('id', role.id)
+    load()
+  }
+  const deleteRole = async (id: string) => {
+    if (confirm('Delete this role? Staff logins using it will lose admin access until reassigned.')) {
+      await supabase.from('wh_admin_roles').delete().eq('id', id); load()
+    }
+  }
+
+  return (
+    <div style={{ maxWidth: 560 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Create a new role</div>
+      <input style={{ ...inp, marginBottom: 10 }} placeholder="Role name (e.g. Press Secretary, Photographer)" value={newName} onChange={e => setNewName(e.target.value)} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
+        {PERMISSION_TABS.map(t => (
+          <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: newPerms.includes(t.id) ? C.navy : '#132743', border: `1px solid ${C.cardBorder}`, borderRadius: 6, padding: '6px 12px', fontSize: 12, color: '#fff', cursor: 'pointer' }}>
+            <input type="checkbox" checked={newPerms.includes(t.id)} onChange={() => setNewPerms(togglePermArr(newPerms, t.id))} /> {t.label}
+          </label>
+        ))}
       </div>
-      {positions.length === 0 ? (
-        <div style={{ padding: 30, textAlign: 'center', color: C.gray, background: C.white, border: `1px solid ${C.border}`, borderRadius: 8, marginBottom: 20 }}>
-          No open positions listed right now.
+      <button style={btn(C.green)} onClick={createRole}>+ Create role</button>
+
+      <div style={{ marginTop: 30, paddingTop: 20, borderTop: `1px solid ${C.cardBorder}` }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 12 }}>Existing roles</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {roles.map(r => (
+            <div key={r.id} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 8, padding: 14 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{r.name}</div>
+                <button style={btn(C.red)} onClick={() => deleteRole(r.id)}>Delete</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {PERMISSION_TABS.map(t => (
+                  <label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: (r.permissions || []).includes(t.id) ? C.navy : '#132743', border: `1px solid ${C.cardBorder}`, borderRadius: 6, padding: '5px 10px', fontSize: 11, color: '#fff', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={(r.permissions || []).includes(t.id)} onChange={() => updateRolePerms(r, togglePermArr(r.permissions || [], t.id))} /> {t.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
+          {roles.length === 0 && <div style={{ color: C.muted, fontSize: 12 }}>No custom roles yet. Owner always has full access.</div>}
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
-          {positions.map((p, i) => (
-            <div key={i} style={{ background: C.white, border: `1px solid ${C.border}`, borderLeft: `4px solid ${C.gold}`, borderRadius: 6, padding: '16px 20px' }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 4 }}>{p.title}</div>
-              {p.desc && <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>{p.desc}</div>}
+      </div>
+    </div>
+  )
+}
+
+/* ─── Staff tab (Owner only) ────────────────────────────────────── */
+function StaffTab() {
+  const [users, setUsers] = useState<any[]>([])
+  const [roles, setRoles] = useState<any[]>([])
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('')
+  const [error, setError] = useState('')
+  const [saved, setSaved] = useState(false)
+  const [busy, setBusy] = useState(false)
+
+  const load = () => {
+    supabase.from('wh_staff_profiles').select('id, email, role').then(({ data }) => setUsers(data || []))
+    supabase.from('wh_admin_roles').select('*').order('name').then(({ data }) => setRoles(data || []))
+  }
+  useEffect(load, [])
+
+  const getToken = async () => {
+    const { data } = await supabase.auth.getSession()
+    return data.session?.access_token
+  }
+
+  const createStaff = async () => {
+    setError('')
+    if (!email.trim() || !password.trim() || !role) { setError('Fill in email, password, and role.'); return }
+    if (password.length < 8) { setError('Password should be at least 8 characters.'); return }
+    const token = await getToken()
+    if (!token) { setError('Your session expired - please log out and back in.'); return }
+    setBusy(true)
+    const res = await fetch('/.netlify/functions/create-staff', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email.trim(), password, role, callerToken: token }),
+    })
+    setBusy(false)
+    if (!res.ok) { setError(await res.text()); return }
+    setEmail(''); setPassword(''); setRole(''); setSaved(true); setTimeout(() => setSaved(false), 2000); load()
+  }
+
+  const deleteStaff = async (id: string, email: string) => {
+    if (!confirm(`Remove login for ${email}?`)) return
+    const token = await getToken()
+    if (!token) { alert('Your session expired - please log out and back in.'); return }
+    setBusy(true)
+    const res = await fetch('/.netlify/functions/delete-staff', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: id, callerToken: token }),
+    })
+    setBusy(false)
+    if (!res.ok) { alert(await res.text()); return }
+    load()
+  }
+
+  return (
+    <div style={{ maxWidth: 480 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 10 }}>Create a staff login</div>
+      <div style={{ fontSize: 12, color: C.muted, marginBottom: 10 }}>
+        Use a real-looking email (it doesn't need to receive mail, e.g. <code>staffer1@osfwh.local</code>).
+      </div>
+      <input style={{ ...inp, marginBottom: 10 }} placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+      <input style={{ ...inp, marginBottom: 10 }} placeholder="Password (min 8 characters)" type="text" value={password} onChange={e => setPassword(e.target.value)} />
+      <select style={{ ...inp, marginBottom: 10 }} value={role} onChange={e => setRole(e.target.value)}>
+        <option value="">Select a role...</option>
+        <option value="Owner">Owner (full access)</option>
+        {roles.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
+      </select>
+      {error && <div style={{ color: C.redText, fontSize: 12, marginBottom: 10 }}>{error}</div>}
+      <button style={btn(C.green)} onClick={createStaff} disabled={busy}>{busy ? 'Working...' : '+ Create login'}</button>
+      {saved && <span style={{ color: '#9ae6b4', marginLeft: 12, fontSize: 13 }}>Created ✓</span>}
+      {roles.length === 0 && <div style={{ color: C.muted, fontSize: 12, marginTop: 10 }}>Tip: create a role first in the Roles tab.</div>}
+
+      <div style={{ marginTop: 30, paddingTop: 20, borderTop: `1px solid ${C.cardBorder}` }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', marginBottom: 12 }}>Existing logins</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {users.map(u => (
+            <div key={u.id} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 6, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>{u.email}</div>
+                <div style={{ fontSize: 11, color: C.muted }}>{u.role}</div>
+              </div>
+              <button style={btn(C.red)} onClick={() => deleteStaff(u.id, u.email)} disabled={busy}>Remove</button>
             </div>
           ))}
         </div>
-      )}
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <Link to="/apply" style={{ background: C.navy, color: C.white, padding: '10px 20px', borderRadius: 4, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>Apply Now</Link>
-        <Link to="/applications" style={{ background: C.white, color: C.navy, border: `1px solid ${C.border}`, padding: '10px 20px', borderRadius: 4, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>Check Application Status</Link>
       </div>
     </div>
   )
 }
 
-/* ─── Page ──────────────────────────────────────────────────────── */
-/* ─── Intro video overlay ───────────────────────────────────────── */
-function IntroVideoOverlay() {
-  const [url, setUrl] = useState<string | null>(null)
-  const [dismissed, setDismissed] = useState(false)
+/* ─── Panel ─────────────────────────────────────────────────────── */
+function AdminPanel() {
+  const [checking, setChecking] = useState(true)
+  const [authed, setAuthed] = useState(false)
+  const [role, setRole] = useState('Owner')
+  const [permTabs, setPermTabs] = useState<Tab[] | null>(null)
+  const [tab, setTab] = useState<Tab | null>(null)
 
   useEffect(() => {
-    if (sessionStorage.getItem('wh-intro-shown') === 'true') { setDismissed(true); return }
-    supabase.from('wh_settings').select('*').eq('key', 'intro_video_url').single().then(({ data }) => {
-      if (data?.value) setUrl(data.value)
-      else setDismissed(true)
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session) {
+        const { data: profile } = await supabase.from('wh_staff_profiles').select('role').eq('id', data.session.user.id).single()
+        setRole(profile?.role || 'Owner')
+        setAuthed(true)
+      }
+      setChecking(false)
     })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setAuthed(false); setTab(null) }
+    })
+    return () => sub.subscription.unsubscribe()
   }, [])
 
-  const dismiss = () => { sessionStorage.setItem('wh-intro-shown', 'true'); setDismissed(true) }
+  useEffect(() => {
+    if (!authed) return
+    if (role === 'Owner') { setPermTabs(null); return }
+    supabase.from('wh_admin_roles').select('*').eq('name', role).single().then(({ data }) => {
+      setPermTabs((data?.permissions || []) as Tab[])
+    })
+  }, [authed, role])
 
-  if (dismissed || !url) return null
+  const visibleTabs = role === 'Owner' ? ALL_TABS : ALL_TABS.filter(t => !t.ownerOnly && permTabs?.includes(t.id))
+
+  useEffect(() => {
+    if (tab === null && visibleTabs.length > 0) setTab(visibleTabs[0].id)
+  }, [visibleTabs, tab])
+
+  if (checking) return <div style={{ minHeight: '100vh', background: C.navyDark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+
+  if (!authed) return <LoginScreen onAuthed={r => { setRole(r); setAuthed(true) }} />
+
+  if (role !== 'Owner' && permTabs === null) {
+    return <div style={{ minHeight: '100vh', background: C.navyDark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>
+  }
+
+  if (visibleTabs.length === 0) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.navyDark, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, textAlign: 'center', padding: 24 }}>
+        <div>Your role ({role}) doesn't have access to any admin sections yet.</div>
+        <div style={{ fontSize: 13, color: C.muted }}>Ask an Owner to grant permissions in the Roles tab.</div>
+        <Link to="/" style={{ color: '#9ae6b4', fontSize: 13, marginTop: 8 }}>← Back to site</Link>
+      </div>
+    )
+  }
 
   return (
-    <div onClick={dismiss} onWheel={dismiss} style={{ position: 'fixed', inset: 0, background: '#000', zIndex: 200, cursor: 'pointer' }}>
-      <video
-        src={url} autoPlay muted playsInline onEnded={dismiss}
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-      />
-      <button onClick={dismiss} style={{
-        position: 'absolute', top: 20, right: 20, background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.4)',
-        color: '#fff', padding: '8px 18px', borderRadius: 20, fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: 'pointer',
-      }}>SKIP ✕</button>
-    </div>
-  )
-}
-
-function WHHome() {
-  const [tab, setTab] = useState<TabId>('home')
-
-  return (
-    <div style={{ minHeight: '100vh', background: C.offWhite, fontFamily: 'system-ui, sans-serif' }}>
-      <IntroVideoOverlay />
-      <Header tab={tab} setTab={setTab} />
-      <main style={{ maxWidth: 1000, margin: '0 auto', padding: '32px 24px' }}>
-        {tab === 'home' && <HomeTab setTab={setTab} />}
-        {tab === 'news' && <PostFeed category="news" accent={C.navy} />}
-        {tab === 'eo' && <PostFeed category="eo" accent={C.gold} />}
-        {tab === 'memo' && <PostFeed category="memo" accent={C.navyLight} />}
+    <div style={{ minHeight: '100vh', background: `linear-gradient(160deg, ${C.navyDark} 0%, #0d1b33 50%, #1a1030 100%)`, fontFamily: 'sans-serif' }}>
+      <header style={{ background: 'rgba(12,28,51,0.75)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: `1px solid ${C.cardBorder}`, padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ color: '#fff', fontWeight: 700 }}>White House Admin</div>
+          <div style={{ fontSize: 11, color: C.muted, background: '#132743', border: `1px solid ${C.cardBorder}`, borderRadius: 20, padding: '2px 10px' }}>{role}</div>
+          <Link to="/" style={{ fontSize: 12, color: C.muted, textDecoration: 'none' }}>← Back to site</Link>
+        </div>
+        <button style={btn('#333')} onClick={async () => { await supabase.auth.signOut(); setAuthed(false); setTab(null) }}>Log Out</button>
+      </header>
+      <div style={{ display: 'flex', gap: 8, padding: '16px 24px 0', flexWrap: 'wrap' }}>
+        {visibleTabs.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} style={{ ...btn(tab === t.id ? C.navy : 'rgba(255,255,255,0.06)'), padding: '8px 16px', border: tab === t.id ? 'none' : `1px solid ${C.cardBorder}` }}>{t.label}</button>
+        ))}
+      </div>
+      <main style={{ padding: 24 }}>
+        {tab === 'posts' && <PostsTab />}
         {tab === 'gallery' && <GalleryTab />}
         {tab === 'leadership' && <LeadershipTab />}
+        {tab === 'positions' && <PositionsTab />}
         {tab === 'applications' && <ApplicationsTab />}
+        {tab === 'settings' && <SettingsTab />}
+        {tab === 'roles' && <RolesTab />}
+        {tab === 'staff' && <StaffTab />}
       </main>
-      <SiteFooter />
     </div>
   )
 }
