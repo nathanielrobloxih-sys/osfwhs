@@ -581,4 +581,3 @@ function AdminPanel() {
     </div>
   )
 }
-}
